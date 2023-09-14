@@ -147,7 +147,7 @@ class _RegistrationPageWidgetState extends State<RegistrationPageWidget>
                 padding: EdgeInsetsDirectional.fromSTEB(32, 32, 32, 32),
                 child: Container(
                   width: double.infinity,
-                  height: 300,
+                  height: 200,
                   decoration: BoxDecoration(
                     color: FlutterFlowTheme.of(context).primaryBackground,
                     borderRadius: BorderRadius.circular(16),
@@ -165,7 +165,7 @@ class _RegistrationPageWidgetState extends State<RegistrationPageWidget>
               Align(
                 alignment: AlignmentDirectional(0, -1),
                 child: Padding(
-                  padding: EdgeInsetsDirectional.fromSTEB(0, 170, 0, 0),
+                  padding: EdgeInsetsDirectional.fromSTEB(0, 0, 0, 0),
                   child: SingleChildScrollView(
                     child: Column(
                       mainAxisSize: MainAxisSize.max,
@@ -177,8 +177,8 @@ class _RegistrationPageWidgetState extends State<RegistrationPageWidget>
                           child: Container(
                             width: double.infinity,
                             height: MediaQuery.sizeOf(context).width >= 768.0
-                                ? 530.0
-                                : 630.0,
+                                ? 1000
+                                : 720.0,
                             constraints: BoxConstraints(
                               maxWidth: 570,
                             ),
@@ -1154,9 +1154,9 @@ class _RegistrationPageWidgetState extends State<RegistrationPageWidget>
                                                                     height: 44,
                                                                     padding: EdgeInsetsDirectional
                                                                         .fromSTEB(
+                                                                            10,
                                                                             0,
-                                                                            0,
-                                                                            0,
+                                                                            10,
                                                                             0),
                                                                     iconPadding:
                                                                         EdgeInsetsDirectional.fromSTEB(
@@ -1989,6 +1989,12 @@ class _RegistrationPageWidgetState extends State<RegistrationPageWidget>
         Fluttertoast.showToast(msg: "Настана грешка: " + errMsg);
       }))
           .user;
+
+      showDialog(
+          context: context,
+          builder: ((context) => AlertDialog(
+                content: Text("Се регистрирате. Ве молиме почекајте."),
+              )));
       if (firebaseUser == null) {
         Fluttertoast.showToast(
             msg:
@@ -2056,6 +2062,12 @@ class _RegistrationPageWidgetState extends State<RegistrationPageWidget>
             (await _firebaseAuth.signInWithEmailAndPassword(
                 email: _model.emailAddressController2.text,
                 password: _model.passwordController2.text));
+
+        showDialog(
+            context: context,
+            builder: ((context) => AlertDialog(
+                  content: Text("Се најавувате. Ве молиме почекајте."),
+                )));
 
         if (firebaseUser != null) {
           DataSnapshot userSnap =

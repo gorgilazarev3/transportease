@@ -61,12 +61,13 @@ class _LoginPageWidgetState extends State<LoginPageWidget> {
                 children: [
                   Padding(
                     padding:
-                        EdgeInsetsDirectional.fromSTEB(0.0, 32.0, 0.0, 32.0),
+                        EdgeInsetsDirectional.fromSTEB(52.0, 32.0, 52.0, 32.0),
                     child: Container(
                       width: 200.0,
                       height: 70.0,
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(16.0),
+                        color: FlutterFlowTheme.of(context).accent2,
                       ),
                       alignment: AlignmentDirectional(0.0, 0.0),
                       child: AutoSizeText(
@@ -648,6 +649,12 @@ class _LoginPageWidgetState extends State<LoginPageWidget> {
             (await _firebaseAuth.signInWithEmailAndPassword(
                 email: _model.emailAddressController.text,
                 password: _model.passwordController.text));
+
+        showDialog(
+            context: context,
+            builder: ((context) => AlertDialog(
+                  content: Text("Се најавувате. Ве молиме почекајте."),
+                )));
 
         if (firebaseUser != null) {
           DataSnapshot userSnap =

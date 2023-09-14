@@ -20,7 +20,9 @@ class LandingPage extends StatelessWidget {
           child: Container(
             width: double.infinity,
             constraints: BoxConstraints(
-              maxWidth: 670,
+              maxWidth: MediaQuery.sizeOf(context).width >= 768
+                  ? MediaQuery.sizeOf(context).width
+                  : 670,
             ),
             decoration: BoxDecoration(
               color: FlutterFlowTheme.of(context).secondaryBackground,
@@ -99,9 +101,12 @@ class LandingPage extends StatelessWidget {
                             size: 24,
                           ),
                           options: FFButtonOptions(
-                            width: double.infinity,
+                            width: MediaQuery.sizeOf(context).width >= 768
+                                ? MediaQuery.sizeOf(context).width * 0.5
+                                : double.infinity,
                             height: 60,
-                            padding: EdgeInsetsDirectional.fromSTEB(0, 0, 0, 0),
+                            padding:
+                                EdgeInsetsDirectional.fromSTEB(10, 0, 10, 0),
                             iconPadding:
                                 EdgeInsetsDirectional.fromSTEB(0, 0, 12, 0),
                             color: FlutterFlowTheme.of(context).primaryText,
@@ -150,9 +155,12 @@ class LandingPage extends StatelessWidget {
                             size: 24,
                           ),
                           options: FFButtonOptions(
-                            width: double.infinity,
+                            width: MediaQuery.sizeOf(context).width >= 768
+                                ? MediaQuery.sizeOf(context).width * 0.5
+                                : double.infinity,
                             height: 60,
-                            padding: EdgeInsetsDirectional.fromSTEB(0, 0, 0, 0),
+                            padding:
+                                EdgeInsetsDirectional.fromSTEB(10, 0, 10, 0),
                             iconPadding:
                                 EdgeInsetsDirectional.fromSTEB(0, 0, 12, 0),
                             color: FlutterFlowTheme.of(context)
@@ -190,9 +198,12 @@ class LandingPage extends StatelessWidget {
                             size: 24,
                           ),
                           options: FFButtonOptions(
-                            width: double.infinity,
+                            width: MediaQuery.sizeOf(context).width >= 768
+                                ? MediaQuery.sizeOf(context).width * 0.5
+                                : double.infinity,
                             height: 60,
-                            padding: EdgeInsetsDirectional.fromSTEB(0, 0, 0, 0),
+                            padding:
+                                EdgeInsetsDirectional.fromSTEB(10, 0, 10, 0),
                             iconPadding:
                                 EdgeInsetsDirectional.fromSTEB(0, 0, 12, 0),
                             color: FlutterFlowTheme.of(context).primary,

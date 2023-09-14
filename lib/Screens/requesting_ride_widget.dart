@@ -116,21 +116,24 @@ class _RequestingRideWidgetState extends State<RequestingRideWidget>
               mainAxisSize: MainAxisSize.max,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Align(
-                  alignment: AlignmentDirectional(0, 0),
-                  child: Text(
-                    'Се бара достапен превоз',
-                    style: FlutterFlowTheme.of(context).titleMedium.override(
-                          fontFamily:
-                              FlutterFlowTheme.of(context).titleMediumFamily,
-                          color: FlutterFlowTheme.of(context).primary,
-                          fontSize: 26,
-                          fontWeight: FontWeight.w800,
-                          useGoogleFonts: GoogleFonts.asMap().containsKey(
-                              FlutterFlowTheme.of(context).titleMediumFamily),
-                        ),
-                  ).animateOnPageLoad(
-                      animationsMap['textOnPageLoadAnimation1']!),
+                Expanded(
+                  child: Align(
+                    alignment: AlignmentDirectional(0, 0),
+                    child: Text(
+                      'Се бара достапен превоз',
+                      style: FlutterFlowTheme.of(context).titleMedium.override(
+                            fontFamily:
+                                FlutterFlowTheme.of(context).titleMediumFamily,
+                            color: FlutterFlowTheme.of(context).primary,
+                            fontSize: 26,
+                            fontWeight: FontWeight.w800,
+                            useGoogleFonts: GoogleFonts.asMap().containsKey(
+                                FlutterFlowTheme.of(context).titleMediumFamily),
+                          ),
+                      textAlign: TextAlign.center,
+                    ).animateOnPageLoad(
+                        animationsMap['textOnPageLoadAnimation1']!),
+                  ),
                 ),
               ],
             ),
@@ -177,7 +180,9 @@ class _RequestingRideWidgetState extends State<RequestingRideWidget>
                           borderColor: FlutterFlowTheme.of(context).alternate,
                           borderRadius: 20,
                           borderWidth: 1,
-                          buttonSize: MediaQuery.sizeOf(context).width * 0.13,
+                          buttonSize: MediaQuery.sizeOf(context).width >= 768
+                              ? MediaQuery.sizeOf(context).width * 0.03
+                              : MediaQuery.sizeOf(context).width * 0.13,
                           fillColor: FlutterFlowTheme.of(context).info,
                           icon: Icon(
                             Icons.close,

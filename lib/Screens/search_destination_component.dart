@@ -76,255 +76,276 @@ class _SearchDestinationWidgetState extends State<SearchDestinationWidget> {
         : "";
     _model.textController1.text = currentAddress;
 
-    return Scaffold(
-      body: Column(
-        children: [
-          Container(
-            width: MediaQuery.sizeOf(context).width,
-            height: MediaQuery.sizeOf(context).height * 0.3,
-            decoration: BoxDecoration(
-              color: FlutterFlowTheme.of(context).secondaryBackground,
-              borderRadius: BorderRadius.only(
-                bottomLeft: Radius.circular(20),
-                bottomRight: Radius.circular(20),
-                topLeft: Radius.circular(0),
-                topRight: Radius.circular(0),
+    return SafeArea(
+      child: Scaffold(
+        body: Column(
+          children: [
+            Container(
+              width: MediaQuery.sizeOf(context).width,
+              height: MediaQuery.sizeOf(context).height * 0.3,
+              decoration: BoxDecoration(
+                color: FlutterFlowTheme.of(context).secondaryBackground,
+                borderRadius: BorderRadius.only(
+                  bottomLeft: Radius.circular(20),
+                  bottomRight: Radius.circular(20),
+                  topLeft: Radius.circular(0),
+                  topRight: Radius.circular(0),
+                ),
               ),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.max,
-              children: [
-                Align(
-                  alignment: AlignmentDirectional(1, 0),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.max,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Align(
-                        alignment: AlignmentDirectional(0, -1),
-                        child: Padding(
-                          padding: EdgeInsetsDirectional.fromSTEB(0, 10, 0, 0),
-                          child: Text(
-                            'Изберете дестинација',
-                            style: FlutterFlowTheme.of(context).bodyMedium,
+              child: Column(
+                mainAxisSize: MainAxisSize.max,
+                children: [
+                  Align(
+                    alignment: AlignmentDirectional(1, 0),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.max,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Align(
+                          alignment: AlignmentDirectional(0, -1),
+                          child: Padding(
+                            padding:
+                                EdgeInsetsDirectional.fromSTEB(0, 10, 0, 0),
+                            child: Text(
+                              'Изберете дестинација',
+                              style: FlutterFlowTheme.of(context).bodyMedium,
+                            ),
                           ),
                         ),
+                      ],
+                    ),
+                  ),
+                  Column(
+                    mainAxisSize: MainAxisSize.max,
+                    children: [
+                      Row(
+                        mainAxisSize: MainAxisSize.max,
+                        children: [
+                          Padding(
+                            padding:
+                                EdgeInsetsDirectional.fromSTEB(0, 10, 0, 0),
+                            child: Container(
+                              width: MediaQuery.sizeOf(context).width,
+                              height: MediaQuery.sizeOf(context).height * 0.1,
+                              decoration: BoxDecoration(
+                                color: FlutterFlowTheme.of(context)
+                                    .secondaryBackground,
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.max,
+                                children: [
+                                  Align(
+                                    alignment: AlignmentDirectional(-1, 0),
+                                    child: Padding(
+                                      padding: EdgeInsetsDirectional.fromSTEB(
+                                          20, 0, 0, 0),
+                                      child: Icon(
+                                        Icons.my_location,
+                                        color: FlutterFlowTheme.of(context)
+                                            .secondaryText,
+                                        size: 24,
+                                      ),
+                                    ),
+                                  ),
+                                  Expanded(
+                                    child: Padding(
+                                      padding: EdgeInsetsDirectional.fromSTEB(
+                                          8, 0, 8, 0),
+                                      child: TextFormField(
+                                        controller: _model.textController1,
+                                        autofocus: false,
+                                        obscureText: false,
+                                        decoration: InputDecoration(
+                                          labelText: 'Ваша локација',
+                                          labelStyle:
+                                              FlutterFlowTheme.of(context)
+                                                  .labelMedium,
+                                          hintStyle:
+                                              FlutterFlowTheme.of(context)
+                                                  .labelMedium,
+                                          enabledBorder: OutlineInputBorder(
+                                            borderSide: BorderSide(
+                                              color:
+                                                  FlutterFlowTheme.of(context)
+                                                      .alternate,
+                                              width: 2,
+                                            ),
+                                            borderRadius:
+                                                BorderRadius.circular(8),
+                                          ),
+                                          focusedBorder: OutlineInputBorder(
+                                            borderSide: BorderSide(
+                                              color:
+                                                  FlutterFlowTheme.of(context)
+                                                      .primary,
+                                              width: 2,
+                                            ),
+                                            borderRadius:
+                                                BorderRadius.circular(8),
+                                          ),
+                                          errorBorder: OutlineInputBorder(
+                                            borderSide: BorderSide(
+                                              color:
+                                                  FlutterFlowTheme.of(context)
+                                                      .error,
+                                              width: 2,
+                                            ),
+                                            borderRadius:
+                                                BorderRadius.circular(8),
+                                          ),
+                                          focusedErrorBorder:
+                                              OutlineInputBorder(
+                                            borderSide: BorderSide(
+                                              color:
+                                                  FlutterFlowTheme.of(context)
+                                                      .error,
+                                              width: 2,
+                                            ),
+                                            borderRadius:
+                                                BorderRadius.circular(8),
+                                          ),
+                                        ),
+                                        style: FlutterFlowTheme.of(context)
+                                            .bodyMedium,
+                                        validator: _model
+                                            .textController1Validator
+                                            .asValidator(context),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      Row(
+                        mainAxisSize: MainAxisSize.max,
+                        children: [
+                          Padding(
+                            padding:
+                                EdgeInsetsDirectional.fromSTEB(0, 20, 0, 0),
+                            child: Container(
+                              width: MediaQuery.sizeOf(context).width,
+                              height: MediaQuery.sizeOf(context).height * 0.08,
+                              decoration: BoxDecoration(
+                                color: FlutterFlowTheme.of(context)
+                                    .secondaryBackground,
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.max,
+                                children: [
+                                  Align(
+                                    alignment: AlignmentDirectional(-1, 0),
+                                    child: Padding(
+                                      padding: EdgeInsetsDirectional.fromSTEB(
+                                          20, 0, 0, 0),
+                                      child: Icon(
+                                        Icons.location_on,
+                                        color: FlutterFlowTheme.of(context)
+                                            .secondaryText,
+                                        size: 24,
+                                      ),
+                                    ),
+                                  ),
+                                  Expanded(
+                                    child: Padding(
+                                      padding: EdgeInsetsDirectional.fromSTEB(
+                                          8, 0, 8, 0),
+                                      child: TextFormField(
+                                        controller: _model.textController2,
+                                        autofocus: false,
+                                        obscureText: false,
+                                        onChanged: (value) => findPlace(value),
+                                        decoration: InputDecoration(
+                                          labelText: 'Дестинација',
+                                          labelStyle:
+                                              FlutterFlowTheme.of(context)
+                                                  .labelMedium,
+                                          hintStyle:
+                                              FlutterFlowTheme.of(context)
+                                                  .labelMedium,
+                                          enabledBorder: OutlineInputBorder(
+                                            borderSide: BorderSide(
+                                              color:
+                                                  FlutterFlowTheme.of(context)
+                                                      .alternate,
+                                              width: 2,
+                                            ),
+                                            borderRadius:
+                                                BorderRadius.circular(8),
+                                          ),
+                                          focusedBorder: OutlineInputBorder(
+                                            borderSide: BorderSide(
+                                              color:
+                                                  FlutterFlowTheme.of(context)
+                                                      .primary,
+                                              width: 2,
+                                            ),
+                                            borderRadius:
+                                                BorderRadius.circular(8),
+                                          ),
+                                          errorBorder: OutlineInputBorder(
+                                            borderSide: BorderSide(
+                                              color:
+                                                  FlutterFlowTheme.of(context)
+                                                      .error,
+                                              width: 2,
+                                            ),
+                                            borderRadius:
+                                                BorderRadius.circular(8),
+                                          ),
+                                          focusedErrorBorder:
+                                              OutlineInputBorder(
+                                            borderSide: BorderSide(
+                                              color:
+                                                  FlutterFlowTheme.of(context)
+                                                      .error,
+                                              width: 2,
+                                            ),
+                                            borderRadius:
+                                                BorderRadius.circular(8),
+                                          ),
+                                        ),
+                                        style: FlutterFlowTheme.of(context)
+                                            .bodyMedium,
+                                        validator: _model
+                                            .textController2Validator
+                                            .asValidator(context),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
-                ),
-                Column(
-                  mainAxisSize: MainAxisSize.max,
-                  children: [
-                    Row(
-                      mainAxisSize: MainAxisSize.max,
-                      children: [
-                        Padding(
-                          padding: EdgeInsetsDirectional.fromSTEB(0, 10, 0, 0),
-                          child: Container(
-                            width: MediaQuery.sizeOf(context).width,
-                            height: MediaQuery.sizeOf(context).height * 0.1,
-                            decoration: BoxDecoration(
-                              color: FlutterFlowTheme.of(context)
-                                  .secondaryBackground,
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.max,
-                              children: [
-                                Align(
-                                  alignment: AlignmentDirectional(-1, 0),
-                                  child: Padding(
-                                    padding: EdgeInsetsDirectional.fromSTEB(
-                                        20, 0, 0, 0),
-                                    child: Icon(
-                                      Icons.my_location,
-                                      color: FlutterFlowTheme.of(context)
-                                          .secondaryText,
-                                      size: 24,
-                                    ),
-                                  ),
-                                ),
-                                Expanded(
-                                  child: Padding(
-                                    padding: EdgeInsetsDirectional.fromSTEB(
-                                        8, 0, 8, 0),
-                                    child: TextFormField(
-                                      controller: _model.textController1,
-                                      autofocus: false,
-                                      obscureText: false,
-                                      decoration: InputDecoration(
-                                        labelText: 'Ваша локација',
-                                        labelStyle: FlutterFlowTheme.of(context)
-                                            .labelMedium,
-                                        hintStyle: FlutterFlowTheme.of(context)
-                                            .labelMedium,
-                                        enabledBorder: OutlineInputBorder(
-                                          borderSide: BorderSide(
-                                            color: FlutterFlowTheme.of(context)
-                                                .alternate,
-                                            width: 2,
-                                          ),
-                                          borderRadius:
-                                              BorderRadius.circular(8),
-                                        ),
-                                        focusedBorder: OutlineInputBorder(
-                                          borderSide: BorderSide(
-                                            color: FlutterFlowTheme.of(context)
-                                                .primary,
-                                            width: 2,
-                                          ),
-                                          borderRadius:
-                                              BorderRadius.circular(8),
-                                        ),
-                                        errorBorder: OutlineInputBorder(
-                                          borderSide: BorderSide(
-                                            color: FlutterFlowTheme.of(context)
-                                                .error,
-                                            width: 2,
-                                          ),
-                                          borderRadius:
-                                              BorderRadius.circular(8),
-                                        ),
-                                        focusedErrorBorder: OutlineInputBorder(
-                                          borderSide: BorderSide(
-                                            color: FlutterFlowTheme.of(context)
-                                                .error,
-                                            width: 2,
-                                          ),
-                                          borderRadius:
-                                              BorderRadius.circular(8),
-                                        ),
-                                      ),
-                                      style: FlutterFlowTheme.of(context)
-                                          .bodyMedium,
-                                      validator: _model.textController1Validator
-                                          .asValidator(context),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    Row(
-                      mainAxisSize: MainAxisSize.max,
-                      children: [
-                        Padding(
-                          padding: EdgeInsetsDirectional.fromSTEB(0, 20, 0, 0),
-                          child: Container(
-                            width: MediaQuery.sizeOf(context).width,
-                            height: MediaQuery.sizeOf(context).height * 0.08,
-                            decoration: BoxDecoration(
-                              color: FlutterFlowTheme.of(context)
-                                  .secondaryBackground,
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.max,
-                              children: [
-                                Align(
-                                  alignment: AlignmentDirectional(-1, 0),
-                                  child: Padding(
-                                    padding: EdgeInsetsDirectional.fromSTEB(
-                                        20, 0, 0, 0),
-                                    child: Icon(
-                                      Icons.location_on,
-                                      color: FlutterFlowTheme.of(context)
-                                          .secondaryText,
-                                      size: 24,
-                                    ),
-                                  ),
-                                ),
-                                Expanded(
-                                  child: Padding(
-                                    padding: EdgeInsetsDirectional.fromSTEB(
-                                        8, 0, 8, 0),
-                                    child: TextFormField(
-                                      controller: _model.textController2,
-                                      autofocus: false,
-                                      obscureText: false,
-                                      onChanged: (value) => findPlace(value),
-                                      decoration: InputDecoration(
-                                        labelText: 'Дестинација',
-                                        labelStyle: FlutterFlowTheme.of(context)
-                                            .labelMedium,
-                                        hintStyle: FlutterFlowTheme.of(context)
-                                            .labelMedium,
-                                        enabledBorder: OutlineInputBorder(
-                                          borderSide: BorderSide(
-                                            color: FlutterFlowTheme.of(context)
-                                                .alternate,
-                                            width: 2,
-                                          ),
-                                          borderRadius:
-                                              BorderRadius.circular(8),
-                                        ),
-                                        focusedBorder: OutlineInputBorder(
-                                          borderSide: BorderSide(
-                                            color: FlutterFlowTheme.of(context)
-                                                .primary,
-                                            width: 2,
-                                          ),
-                                          borderRadius:
-                                              BorderRadius.circular(8),
-                                        ),
-                                        errorBorder: OutlineInputBorder(
-                                          borderSide: BorderSide(
-                                            color: FlutterFlowTheme.of(context)
-                                                .error,
-                                            width: 2,
-                                          ),
-                                          borderRadius:
-                                              BorderRadius.circular(8),
-                                        ),
-                                        focusedErrorBorder: OutlineInputBorder(
-                                          borderSide: BorderSide(
-                                            color: FlutterFlowTheme.of(context)
-                                                .error,
-                                            width: 2,
-                                          ),
-                                          borderRadius:
-                                              BorderRadius.circular(8),
-                                        ),
-                                      ),
-                                      style: FlutterFlowTheme.of(context)
-                                          .bodyMedium,
-                                      validator: _model.textController2Validator
-                                          .asValidator(context),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-          placePredictionList.isNotEmpty
-              ? SizedBox(
-                  height: placePredictionList.isNotEmpty ? 150 : 0,
-                  child: ListView.builder(
-                    scrollDirection: Axis.vertical,
-                    shrinkWrap: true,
-                    itemCount: placePredictionList.length,
-                    itemBuilder: (context, index) {
-                      PlacePrediction placePrediction =
-                          placePredictionList[index] as PlacePrediction;
-                      return PlaceTile(
-                          placePrediction: placePrediction,
-                          updateVisibility: _updateVisibility);
-                    },
-                  ),
-                )
-              : Container()
-        ],
+            placePredictionList.isNotEmpty
+                ? SizedBox(
+                    height: placePredictionList.isNotEmpty ? 150 : 0,
+                    child: ListView.builder(
+                      scrollDirection: Axis.vertical,
+                      shrinkWrap: true,
+                      itemCount: placePredictionList.length,
+                      itemBuilder: (context, index) {
+                        PlacePrediction placePrediction =
+                            placePredictionList[index] as PlacePrediction;
+                        return PlaceTile(
+                            placePrediction: placePrediction,
+                            updateVisibility: _updateVisibility);
+                      },
+                    ),
+                  )
+                : Container()
+          ],
+        ),
       ),
     );
   }
@@ -398,32 +419,39 @@ class PlaceTile extends StatelessWidget {
                     size: 24,
                   ),
                 ),
-                Column(
-                  mainAxisSize: MainAxisSize.max,
-                  children: [
-                    Align(
-                      alignment: AlignmentDirectional(0, -1),
-                      child: Padding(
-                        padding: EdgeInsetsDirectional.fromSTEB(10, 5, 0, 0),
-                        child: Text(
-                          placePrediction.mainText,
-                          style: FlutterFlowTheme.of(context).bodyMedium,
-                          overflow: TextOverflow.ellipsis,
+                SizedBox(
+                  width: MediaQuery.sizeOf(context).width * 0.8,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Align(
+                        alignment: AlignmentDirectional(-1, 0),
+                        child: Padding(
+                          padding: EdgeInsetsDirectional.fromSTEB(10, 5, 0, 0),
+                          child: Text(
+                            placePrediction.mainText,
+                            style: FlutterFlowTheme.of(context).bodyMedium,
+                            overflow: TextOverflow.ellipsis,
+                            textAlign: TextAlign.start,
+                          ),
                         ),
                       ),
-                    ),
-                    Align(
-                      alignment: AlignmentDirectional(-1, 0),
-                      child: Padding(
-                        padding: EdgeInsetsDirectional.fromSTEB(20, 0, 0, 0),
-                        child: Text(
-                          placePrediction.secondaryText,
-                          style: FlutterFlowTheme.of(context).labelSmall,
-                          overflow: TextOverflow.ellipsis,
+                      Flexible(
+                        child: Align(
+                          alignment: AlignmentDirectional(-1, 0),
+                          child: Padding(
+                            padding:
+                                EdgeInsetsDirectional.fromSTEB(20, 0, 0, 0),
+                            child: Text(
+                              placePrediction.secondaryText,
+                              style: FlutterFlowTheme.of(context).labelSmall,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ],
             ),

@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/foundation.dart';
@@ -7,6 +8,8 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_geofire/flutter_geofire.dart';
 import 'package:flutter_polyline_points/flutter_polyline_points.dart';
+import 'package:fluttertoast/fluttertoast.dart';
+import 'package:geoflutterfire2/geoflutterfire2.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -15,6 +18,7 @@ import 'package:google_maps_flutter_platform_interface/src/types/location.dart'
 import 'package:provider/provider.dart';
 import 'package:transportease/AssistantFunctions/methods_assistants.dart';
 import 'package:transportease/Models/address.dart';
+import 'package:transportease/Screens/rating_dialog.dart';
 import 'package:transportease/Screens/requesting_ride_widget.dart';
 import 'package:transportease/Screens/ride_choice_widget.dart';
 import 'package:transportease/Screens/search_destination_component.dart';
@@ -69,6 +73,8 @@ class _MainPageWidgetState extends State<MainPageWidget>
 
   bool farePaid = false;
 
+  bool permissionsGranted = false;
+
   bool get getSearchDestShown => searchDestShown;
   int driverRequestTimeout = 60;
   String state = "normal";
@@ -79,6 +85,7 @@ class _MainPageWidgetState extends State<MainPageWidget>
   String? driverName;
   String? driverPhone;
   String? durationText;
+  String rideType = "regular";
 
   List<MapsLocation.LatLng> pLineCoordinates = [];
   Set<Polyline> polylineSet = {};
@@ -89,6 +96,8 @@ class _MainPageWidgetState extends State<MainPageWidget>
 
   List<NearbyAvailableDriver> availableDrivers = [];
 
+  late StreamSubscription<List<DocumentSnapshot>> streamSub;
+
   @override
   void initState() {
     super.initState();
@@ -97,6 +106,18 @@ class _MainPageWidgetState extends State<MainPageWidget>
   void payFare() {
     setState(() {
       farePaid = true;
+    });
+  }
+
+  void permissionGranted() {
+    setState(() {
+      permissionsGranted = true;
+    });
+  }
+
+  void changeRideType(String newRideType) {
+    setState(() {
+      rideType = newRideType;
     });
   }
 
@@ -132,7 +153,8 @@ class _MainPageWidgetState extends State<MainPageWidget>
       "pickUp_address": pickUp.placeFormattedAddress,
       "destination_address": destination.placeFormattedAddress,
       "pickUp_place": pickUp.placeName,
-      "destination_place": destination.placeName
+      "destination_place": destination.placeName,
+      "ride_type": rideType
     };
 
     rideRequestRef.set(rideInfoObj);
@@ -190,11 +212,19 @@ class _MainPageWidgetState extends State<MainPageWidget>
           if (data["driver_id"] != null) {
             driverId = data["driver_id"].toString();
           }
-          if (res && farePaid) {
-            rideRequestRef.onDisconnect();
-            rideStreamSub!.cancel();
-            rideStreamSub = null;
-            resetTrip();
+          if (res == "paid" && farePaid) {
+            var res_rating = await showDialog(
+              builder: (context) => RatingDialogWidget(
+                driverId: driverId,
+              ),
+              context: context,
+            );
+            if (res_rating == "rated") {
+              rideRequestRef.onDisconnect();
+              rideStreamSub!.cancel();
+              rideStreamSub = null;
+              resetTrip();
+            }
           }
         }
       }
@@ -254,6 +284,7 @@ class _MainPageWidgetState extends State<MainPageWidget>
     setState(() {
       state = "normal";
     });
+    updateAvailableDriverList();
   }
 
   Future<void> requestRide() async {
@@ -306,6 +337,7 @@ class _MainPageWidgetState extends State<MainPageWidget>
         return Future.error('Location Not Available');
       }
     }
+    permissionGranted();
     Position position = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
         forceAndroidLocationManager: true);
@@ -340,238 +372,133 @@ class _MainPageWidgetState extends State<MainPageWidget>
       carPlates = "";
       driverAccepted = false;
       farePaid = false;
+      requestedRide = false;
     });
+    initGeoFireListener();
+    updateAvailableDriversOnMap();
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      resizeToAvoidBottomInset: false,
-      drawer: Drawer(
-        elevation: 16,
-        child: Column(
-          mainAxisSize: MainAxisSize.max,
-          children: [
-            Row(
-              mainAxisSize: MainAxisSize.max,
-              children: [
-                Expanded(
-                  child: Container(
-                    width: MediaQuery.sizeOf(context).width * 0.78,
-                    height: MediaQuery.sizeOf(context).height * 0.05,
-                    decoration: BoxDecoration(
-                      color: FlutterFlowTheme.of(context).accent1,
+    return SafeArea(
+      child: Scaffold(
+        resizeToAvoidBottomInset: false,
+        key: scaffoldKey,
+        drawer: Drawer(
+          elevation: 16,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                mainAxisSize: MainAxisSize.max,
+                children: [
+                  Expanded(
+                    child: Container(
+                      width: MediaQuery.sizeOf(context).width * 0.78,
+                      height: MediaQuery.sizeOf(context).height * 0.05,
+                      decoration: BoxDecoration(
+                        color: FlutterFlowTheme.of(context).accent1,
+                      ),
                     ),
                   ),
-                ),
-              ],
-            ),
-            Row(
-              mainAxisSize: MainAxisSize.max,
-              children: [
-                Align(
-                  alignment: AlignmentDirectional(0, 0),
-                  child: Padding(
-                    padding: EdgeInsetsDirectional.fromSTEB(15, 0, 0, 0),
-                    child: Container(
-                      width: MediaQuery.sizeOf(context).width * 0.7,
-                      height: MediaQuery.sizeOf(context).height * 0.2,
-                      decoration: BoxDecoration(),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.max,
-                        children: [
-                          FlutterFlowIconButton(
-                            borderColor: FlutterFlowTheme.of(context).primary,
-                            borderRadius: 20,
-                            borderWidth: 1,
-                            buttonSize: MediaQuery.sizeOf(context).width * 0.13,
-                            fillColor:
-                                FlutterFlowTheme.of(context).secondaryText,
-                            icon: Icon(
-                              Icons.person,
-                              color: FlutterFlowTheme.of(context).primaryText,
-                              size: 24,
+                ],
+              ),
+              Row(
+                mainAxisSize: MainAxisSize.max,
+                children: [
+                  Align(
+                    alignment: AlignmentDirectional(0, 0),
+                    child: Padding(
+                      padding: EdgeInsetsDirectional.fromSTEB(15, 0, 0, 0),
+                      child: Container(
+                        width: MediaQuery.sizeOf(context).width >= 768
+                            ? MediaQuery.sizeOf(context).width * 0.15
+                            : MediaQuery.sizeOf(context).width * 0.7,
+                        height: MediaQuery.sizeOf(context).height * 0.2,
+                        decoration: BoxDecoration(),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.max,
+                          children: [
+                            FlutterFlowIconButton(
+                              borderColor: FlutterFlowTheme.of(context).primary,
+                              borderRadius: 20,
+                              borderWidth: 1,
+                              buttonSize:
+                                  MediaQuery.sizeOf(context).width >= 768
+                                      ? MediaQuery.sizeOf(context).width * 0.05
+                                      : MediaQuery.sizeOf(context).width * 0.13,
+                              fillColor:
+                                  FlutterFlowTheme.of(context).secondaryText,
+                              icon: Icon(
+                                Icons.person,
+                                color: FlutterFlowTheme.of(context).primaryText,
+                                size: 24,
+                              ),
+                              onPressed: () {
+                                print("ICON PRESSED");
+                              },
                             ),
-                            onPressed: () {
-                              print("ICON PRESSED");
-                            },
-                          ),
-                          Align(
-                            alignment: AlignmentDirectional(0, 0),
-                            child: Padding(
-                              padding:
-                                  EdgeInsetsDirectional.fromSTEB(25, 0, 0, 0),
-                              child: Text(
-                                'Име на корисник',
-                                style: FlutterFlowTheme.of(context)
-                                    .bodyLarge
-                                    .override(
-                                      fontFamily: FlutterFlowTheme.of(context)
-                                          .bodyLargeFamily,
-                                      fontWeight: FontWeight.w600,
-                                      useGoogleFonts: GoogleFonts.asMap()
-                                          .containsKey(
-                                              FlutterFlowTheme.of(context)
-                                                  .bodyLargeFamily),
-                                    ),
+                            Align(
+                              alignment: AlignmentDirectional(0, 0),
+                              child: Padding(
+                                padding:
+                                    EdgeInsetsDirectional.fromSTEB(25, 0, 0, 0),
+                                child: Text(
+                                  Provider.of<AppData>(context, listen: false)
+                                              .loggedInUserProfile !=
+                                          null
+                                      ? Provider.of<AppData>(context,
+                                              listen: false)
+                                          .loggedInUserProfile!
+                                          .name
+                                      : 'Име на корисник',
+                                  style: FlutterFlowTheme.of(context)
+                                      .bodyLarge
+                                      .override(
+                                        fontFamily: FlutterFlowTheme.of(context)
+                                            .bodyLargeFamily,
+                                        fontWeight: FontWeight.w600,
+                                        useGoogleFonts: GoogleFonts.asMap()
+                                            .containsKey(
+                                                FlutterFlowTheme.of(context)
+                                                    .bodyLargeFamily),
+                                      ),
+                                ),
                               ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
                   ),
-                ),
-              ],
-            ),
-            Divider(
-              thickness: 1,
-              color: FlutterFlowTheme.of(context).primaryText,
-            ),
-            Align(
-              alignment: AlignmentDirectional(0, 0),
-              child: Padding(
-                padding: EdgeInsetsDirectional.fromSTEB(0, 10, 0, 0),
-                child: Row(
-                  mainAxisSize: MainAxisSize.max,
-                  children: [
-                    Align(
-                      alignment: AlignmentDirectional(0, 0),
-                      child: Padding(
-                        padding: EdgeInsetsDirectional.fromSTEB(25, 0, 0, 0),
-                        child: Icon(
-                          Icons.history,
-                          color: FlutterFlowTheme.of(context).secondaryText,
-                          size: 24,
-                        ),
-                      ),
-                    ),
-                    Padding(
-                      padding: EdgeInsetsDirectional.fromSTEB(30, 0, 0, 0),
-                      child: Text(
-                        'Историја',
-                        style: FlutterFlowTheme.of(context).bodyMedium.override(
-                              fontFamily:
-                                  FlutterFlowTheme.of(context).bodyMediumFamily,
-                              fontWeight: FontWeight.w600,
-                              useGoogleFonts: GoogleFonts.asMap().containsKey(
-                                  FlutterFlowTheme.of(context)
-                                      .bodyMediumFamily),
-                            ),
-                      ),
-                    ),
-                  ],
-                ),
+                ],
               ),
-            ),
-            Align(
-              alignment: AlignmentDirectional(0, 0),
-              child: Padding(
-                padding: EdgeInsetsDirectional.fromSTEB(0, 20, 0, 0),
-                child: Row(
-                  mainAxisSize: MainAxisSize.max,
-                  children: [
-                    Align(
-                      alignment: AlignmentDirectional(0, 0),
-                      child: Padding(
-                        padding: EdgeInsetsDirectional.fromSTEB(25, 0, 0, 0),
-                        child: Icon(
-                          Icons.person,
-                          color: FlutterFlowTheme.of(context).secondaryText,
-                          size: 24,
-                        ),
-                      ),
-                    ),
-                    Padding(
-                      padding: EdgeInsetsDirectional.fromSTEB(30, 0, 0, 0),
-                      child: Text(
-                        'Посети го профилот',
-                        style: FlutterFlowTheme.of(context).bodyMedium.override(
-                              fontFamily:
-                                  FlutterFlowTheme.of(context).bodyMediumFamily,
-                              fontWeight: FontWeight.w600,
-                              useGoogleFonts: GoogleFonts.asMap().containsKey(
-                                  FlutterFlowTheme.of(context)
-                                      .bodyMediumFamily),
-                            ),
-                      ),
-                    ),
-                  ],
-                ),
+              Divider(
+                thickness: 1,
+                color: FlutterFlowTheme.of(context).primaryText,
               ),
-            ),
-            Align(
-              alignment: AlignmentDirectional(0, 0),
-              child: Padding(
-                padding: EdgeInsetsDirectional.fromSTEB(0, 20, 0, 0),
-                child: Row(
-                  mainAxisSize: MainAxisSize.max,
-                  children: [
-                    Align(
-                      alignment: AlignmentDirectional(0, 0),
-                      child: Padding(
-                        padding: EdgeInsetsDirectional.fromSTEB(25, 0, 0, 0),
-                        child: Icon(
-                          Icons.info_rounded,
-                          color: FlutterFlowTheme.of(context).secondaryText,
-                          size: 24,
+              Align(
+                alignment: AlignmentDirectional(0, 0),
+                child: Padding(
+                  padding: EdgeInsetsDirectional.fromSTEB(0, 10, 0, 0),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.max,
+                    children: [
+                      Align(
+                        alignment: AlignmentDirectional(0, 0),
+                        child: Padding(
+                          padding: EdgeInsetsDirectional.fromSTEB(25, 0, 0, 0),
+                          child: Icon(
+                            Icons.history,
+                            color: FlutterFlowTheme.of(context).secondaryText,
+                            size: 24,
+                          ),
                         ),
                       ),
-                    ),
-                    Padding(
-                      padding: EdgeInsetsDirectional.fromSTEB(30, 0, 0, 0),
-                      child: Text(
-                        'За нас',
-                        style: FlutterFlowTheme.of(context).bodyMedium.override(
-                              fontFamily:
-                                  FlutterFlowTheme.of(context).bodyMediumFamily,
-                              fontWeight: FontWeight.w600,
-                              useGoogleFonts: GoogleFonts.asMap().containsKey(
-                                  FlutterFlowTheme.of(context)
-                                      .bodyMediumFamily),
-                            ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            Container(
-              width: MediaQuery.sizeOf(context).width * 0.78,
-              height: MediaQuery.sizeOf(context).height * 0.5,
-              decoration: BoxDecoration(),
-            ),
-            Divider(
-              thickness: 1,
-              color: FlutterFlowTheme.of(context).primaryText,
-            ),
-            Align(
-              alignment: AlignmentDirectional(0, 0),
-              child: Padding(
-                padding: EdgeInsetsDirectional.fromSTEB(0, 10, 0, 0),
-                child: Row(
-                  mainAxisSize: MainAxisSize.max,
-                  children: [
-                    Align(
-                      alignment: AlignmentDirectional(0, 0),
-                      child: Padding(
-                        padding: EdgeInsetsDirectional.fromSTEB(25, 0, 0, 0),
-                        child: Icon(
-                          Icons.logout,
-                          color: FlutterFlowTheme.of(context).secondaryText,
-                          size: 24,
-                        ),
-                      ),
-                    ),
-                    GestureDetector(
-                      onTap: () {
-                        FirebaseAuth.instance.signOut();
-                        context.go("/login");
-                      },
-                      child: Padding(
+                      Padding(
                         padding: EdgeInsetsDirectional.fromSTEB(30, 0, 0, 0),
                         child: Text(
-                          'Одјави се',
+                          'Историја',
                           style: FlutterFlowTheme.of(context)
                               .bodyMedium
                               .override(
@@ -584,490 +511,291 @@ class _MainPageWidgetState extends State<MainPageWidget>
                               ),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
-            ),
-          ],
-        ),
-      ),
-      body: Stack(children: [
-        SlidingSheet(
-            elevation: 8,
-            cornerRadius: 16,
-            snapSpec: const SnapSpec(
-              // Enable snapping. This is true by default.
-              snap: true,
-              // Set custom snapping points.
-              snappings: [0.4, 0.7, 1.0],
-              // Define to what the snappings relate to. In this case,
-              // the total available space that the sheet can expand to.
-              positioning: SnapPositioning.relativeToAvailableSpace,
-            ),
-            // The body widget will be displayed under the SlidingSheet
-            // and a parallax effect can be applied to it.
-            body: Stack(
-              children: [
-                GoogleMap(
-                  mapType: MapType.normal,
-                  myLocationButtonEnabled: true,
-                  myLocationEnabled: true,
-                  zoomGesturesEnabled: true,
-                  zoomControlsEnabled: true,
-                  polylines: polylineSet,
-                  markers: markersSet,
-                  circles: circlesSet,
-                  gestureRecognizers: Set()
-                    ..add(Factory<PanGestureRecognizer>(
-                        () => PanGestureRecognizer()))
-                    ..add(Factory<ScaleGestureRecognizer>(
-                        () => ScaleGestureRecognizer()))
-                    ..add(Factory<TapGestureRecognizer>(
-                        () => TapGestureRecognizer()))
-                    ..add(Factory<VerticalDragGestureRecognizer>(
-                        () => VerticalDragGestureRecognizer())),
-                  initialCameraPosition: _kGooglePlex,
-                  padding: EdgeInsets.only(
-                      bottom: MediaQuery.sizeOf(context).height * 0.3),
-                  onMapCreated: (GoogleMapController controller) => {
-                    _controller.complete(controller),
-                    googleMapController = controller,
-                    locatePosition()
-                  },
-                ),
-                getSearchDestShown
-                    ? AnimatedOpacity(
-                        opacity: getSearchDestShown ? 1.0 : 0.0,
-                        duration: const Duration(milliseconds: 500),
-                        child: SearchDestinationWidget(
-                          visible: getSearchDestShown,
-                          updateParent: updateSearchDestShown,
-                        ),
-                      )
-                    : Container(),
-                showRideChoice
-                    ? Align(
-                        alignment: AlignmentDirectional(-0.89, -0.79),
-                        child: FlutterFlowIconButton(
-                          borderColor: FlutterFlowTheme.of(context).primary,
-                          borderRadius: 20,
-                          borderWidth: 1,
-                          buttonSize: 40,
-                          fillColor: FlutterFlowTheme.of(context).info,
-                          icon: Icon(
-                            Icons.close,
-                            color: FlutterFlowTheme.of(context).primary,
+              Align(
+                alignment: AlignmentDirectional(0, 0),
+                child: Padding(
+                  padding: EdgeInsetsDirectional.fromSTEB(0, 20, 0, 0),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.max,
+                    children: [
+                      Align(
+                        alignment: AlignmentDirectional(0, 0),
+                        child: Padding(
+                          padding: EdgeInsetsDirectional.fromSTEB(25, 0, 0, 0),
+                          child: Icon(
+                            Icons.person,
+                            color: FlutterFlowTheme.of(context).secondaryText,
                             size: 24,
                           ),
-                          onPressed: () {
-                            resetTrip();
-                          },
                         ),
-                      )
-                    : Container()
-              ],
-            ),
-            builder: (context, state) {
-              // This is the content of the sheet that will get
-              // scrolled, if the content is bigger than the available
-              // height of the sheet.
-              return SingleChildScrollView(
-                child: Column(children: [
-                  showRideChoice
-                      ? (requestedRide
-                          ? (driverAccepted
-                              ? Container(
-                                  width: MediaQuery.sizeOf(context).width,
-                                  height:
-                                      MediaQuery.sizeOf(context).height * 0.3,
-                                  decoration: BoxDecoration(
-                                    color: FlutterFlowTheme.of(context)
-                                        .secondaryBackground,
-                                    borderRadius: BorderRadius.only(
-                                      bottomLeft: Radius.circular(0),
-                                      bottomRight: Radius.circular(0),
-                                      topLeft: Radius.circular(25),
-                                      topRight: Radius.circular(25),
-                                    ),
-                                    shape: BoxShape.rectangle,
-                                  ),
-                                  child: SingleChildScrollView(
-                                    child: Column(
-                                      mainAxisSize: MainAxisSize.max,
-                                      children: [
-                                        Align(
-                                          alignment: Alignment.center,
-                                          child: Padding(
-                                            padding:
-                                                EdgeInsetsDirectional.fromSTEB(
-                                                    10, 8, 0, 0),
-                                            child: Text(
-                                              statusRide == "accepted" &&
-                                                      durationText != null
-                                                  ? "Превозникот е на пат кон Вас - ${durationText}"
-                                                  : statusRide == "accepted" &&
-                                                          durationText == null
-                                                      ? "Превозникот е на пат кон Вас"
-                                                      : statusRide ==
-                                                                  "in_progress" &&
-                                                              durationText !=
-                                                                  null
-                                                          ? "Патувате кон дестинацијата - ${durationText}"
-                                                          : statusRide ==
-                                                                  "arrived"
-                                                              ? "Превозникот пристигна на вашата локација"
-                                                              : statusRide ==
-                                                                          "in_progress" &&
-                                                                      durationText ==
-                                                                          null
-                                                                  ? "Патувате кон дестинацијата"
-                                                                  : statusRide ==
-                                                                          "finished"
-                                                                      ? "Пристигнавте на дестинацијата"
-                                                                      : "Превозникот е на пат кон Вас",
-                                              style:
-                                                  FlutterFlowTheme.of(context)
-                                                      .bodyLarge,
-                                            ),
-                                          ),
-                                        ),
-                                        Opacity(
-                                          opacity: 0.8,
-                                          child: Divider(
-                                            thickness: 1,
-                                            color: FlutterFlowTheme.of(context)
-                                                .primaryText,
-                                          ),
-                                        ),
-                                        Align(
-                                          alignment: AlignmentDirectional(0, 1),
-                                          child: Padding(
-                                            padding:
-                                                EdgeInsetsDirectional.fromSTEB(
-                                                    0, 20, 0, 0),
-                                            child: Container(
-                                              width: MediaQuery.sizeOf(context)
-                                                      .width *
-                                                  0.9,
-                                              height: MediaQuery.sizeOf(context)
-                                                      .height *
-                                                  1,
-                                              decoration: BoxDecoration(
-                                                color:
-                                                    FlutterFlowTheme.of(context)
-                                                        .secondaryBackground,
-                                              ),
-                                              child: Column(
-                                                mainAxisSize: MainAxisSize.max,
-                                                children: [
-                                                  Row(
-                                                    mainAxisSize:
-                                                        MainAxisSize.max,
-                                                    children: [
-                                                      Expanded(
-                                                        child: Align(
-                                                          alignment: Alignment
-                                                              .centerLeft,
-                                                          // AlignmentDirectional(
-                                                          //     0, 0),
-                                                          child: Text(
-                                                            carDetails ??
-                                                                'Бела Toyota Corolla',
-                                                            style: FlutterFlowTheme
-                                                                    .of(context)
-                                                                .bodyMedium,
-                                                          ),
-                                                        ),
-                                                      ),
-                                                    ],
-                                                  ),
-                                                  Row(
-                                                    mainAxisSize:
-                                                        MainAxisSize.max,
-                                                    children: [
-                                                      Expanded(
-                                                        child: Align(
-                                                          alignment: Alignment
-                                                              .centerLeft,
-                                                          // AlignmentDirectional(
-                                                          //     0, 0),
-                                                          child: Text(
-                                                            driverName ??
-                                                                'Ime Prezime',
-                                                            style: FlutterFlowTheme
-                                                                    .of(context)
-                                                                .bodyMedium,
-                                                          ),
-                                                        ),
-                                                      ),
-                                                    ],
-                                                  ),
-                                                  Opacity(
-                                                    opacity: 0.8,
-                                                    child: Divider(
-                                                      thickness: 1,
-                                                      color:
-                                                          FlutterFlowTheme.of(
-                                                                  context)
-                                                              .primaryText,
-                                                    ),
-                                                  ),
-                                                  Row(
-                                                    mainAxisAlignment:
-                                                        MainAxisAlignment
-                                                            .spaceAround,
-                                                    children: [
-                                                      Column(
-                                                        children: [
-                                                          FlutterFlowIconButton(
-                                                            icon: Icon(
-                                                              Icons.phone,
-                                                            ),
-                                                            borderRadius: 20,
-                                                            borderWidth: 1,
-                                                            onPressed: () {
-                                                              launch(
-                                                                  "tel://${driverPhone}");
-                                                            },
-                                                          ),
-                                                          Text(
-                                                            "Повикај",
-                                                            style: FlutterFlowTheme
-                                                                    .of(context)
-                                                                .bodySmall,
-                                                          ),
-                                                        ],
-                                                      ),
-                                                      Column(
-                                                        children: [
-                                                          FlutterFlowIconButton(
-                                                            icon: Icon(
-                                                              Icons.list,
-                                                            ),
-                                                            borderRadius: 20,
-                                                            borderWidth: 1,
-                                                            onPressed: () {
-                                                              print(
-                                                                  "details PRESED");
-                                                            },
-                                                          ),
-                                                          Text(
-                                                            "Детали",
-                                                            style: FlutterFlowTheme
-                                                                    .of(context)
-                                                                .bodySmall,
-                                                          ),
-                                                        ],
-                                                      ),
-                                                      Column(
-                                                        children: [
-                                                          FlutterFlowIconButton(
-                                                            icon: Icon(
-                                                              Icons.close,
-                                                            ),
-                                                            borderRadius: 20,
-                                                            borderWidth: 1,
-                                                            onPressed: () {
-                                                              print(
-                                                                  "CANCEL PRESED");
-                                                            },
-                                                          ),
-                                                          Text(
-                                                            "Откажи",
-                                                            style: FlutterFlowTheme
-                                                                    .of(context)
-                                                                .bodySmall,
-                                                          ),
-                                                        ],
-                                                      ),
-                                                    ],
-                                                  ),
-                                                ],
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                )
-                              : RequestingRideWidget(
-                                  requestRide: requestRide,
-                                  cancelRide: cancelRide))
-                          : RideChoiceWidget(
-                              requestRide: requestRide,
-                            ))
-                      : Container(
-                          width: MediaQuery.sizeOf(context).width,
-                          height: MediaQuery.sizeOf(context).height * 0.3,
-                          decoration: BoxDecoration(
-                            color: FlutterFlowTheme.of(context)
-                                .secondaryBackground,
-                            borderRadius: BorderRadius.only(
-                              bottomLeft: Radius.circular(0),
-                              bottomRight: Radius.circular(0),
-                              topLeft: Radius.circular(25),
-                              topRight: Radius.circular(25),
-                            ),
-                            shape: BoxShape.rectangle,
+                      ),
+                      Padding(
+                        padding: EdgeInsetsDirectional.fromSTEB(30, 0, 0, 0),
+                        child: Text(
+                          'Посети го профилот',
+                          style: FlutterFlowTheme.of(context)
+                              .bodyMedium
+                              .override(
+                                fontFamily: FlutterFlowTheme.of(context)
+                                    .bodyMediumFamily,
+                                fontWeight: FontWeight.w600,
+                                useGoogleFonts: GoogleFonts.asMap().containsKey(
+                                    FlutterFlowTheme.of(context)
+                                        .bodyMediumFamily),
+                              ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              Align(
+                alignment: AlignmentDirectional(0, 0),
+                child: Padding(
+                  padding: EdgeInsetsDirectional.fromSTEB(0, 20, 0, 0),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.max,
+                    children: [
+                      Align(
+                        alignment: AlignmentDirectional(0, 0),
+                        child: Padding(
+                          padding: EdgeInsetsDirectional.fromSTEB(25, 0, 0, 0),
+                          child: Icon(
+                            Icons.info_rounded,
+                            color: FlutterFlowTheme.of(context).secondaryText,
+                            size: 24,
                           ),
-                          child: SingleChildScrollView(
-                            child: Column(
-                              mainAxisSize: MainAxisSize.max,
-                              children: [
-                                Align(
-                                  alignment: AlignmentDirectional(-1, 0),
-                                  child: Padding(
-                                    padding: EdgeInsetsDirectional.fromSTEB(
-                                        10, 8, 0, 0),
-                                    child: Text(
-                                      'Здраво,',
-                                      style: FlutterFlowTheme.of(context)
-                                          .bodyMedium
-                                          .override(
-                                            fontFamily:
-                                                FlutterFlowTheme.of(context)
-                                                    .bodyMediumFamily,
-                                            fontWeight: FontWeight.w600,
-                                            useGoogleFonts: GoogleFonts.asMap()
-                                                .containsKey(
-                                                    FlutterFlowTheme.of(context)
-                                                        .bodyMediumFamily),
-                                          ),
-                                    ),
-                                  ),
+                        ),
+                      ),
+                      Padding(
+                        padding: EdgeInsetsDirectional.fromSTEB(30, 0, 0, 0),
+                        child: Text(
+                          'За нас',
+                          style: FlutterFlowTheme.of(context)
+                              .bodyMedium
+                              .override(
+                                fontFamily: FlutterFlowTheme.of(context)
+                                    .bodyMediumFamily,
+                                fontWeight: FontWeight.w600,
+                                useGoogleFonts: GoogleFonts.asMap().containsKey(
+                                    FlutterFlowTheme.of(context)
+                                        .bodyMediumFamily),
+                              ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              Container(
+                width: MediaQuery.sizeOf(context).width * 0.78,
+                height: MediaQuery.sizeOf(context).height * 0.45,
+                decoration: BoxDecoration(),
+              ),
+              Divider(
+                thickness: 1,
+                color: FlutterFlowTheme.of(context).primaryText,
+              ),
+              Align(
+                alignment: AlignmentDirectional(0, 0),
+                child: Padding(
+                  padding: EdgeInsetsDirectional.fromSTEB(0, 10, 0, 0),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.max,
+                    children: [
+                      Align(
+                        alignment: AlignmentDirectional(0, 0),
+                        child: Padding(
+                          padding: EdgeInsetsDirectional.fromSTEB(25, 0, 0, 0),
+                          child: Icon(
+                            Icons.logout,
+                            color: FlutterFlowTheme.of(context).secondaryText,
+                            size: 24,
+                          ),
+                        ),
+                      ),
+                      GestureDetector(
+                        onTap: () {
+                          FirebaseAuth.instance.signOut();
+                          context.go("/login");
+                        },
+                        child: Padding(
+                          padding: EdgeInsetsDirectional.fromSTEB(30, 0, 0, 0),
+                          child: Text(
+                            'Одјави се',
+                            style: FlutterFlowTheme.of(context)
+                                .bodyMedium
+                                .override(
+                                  fontFamily: FlutterFlowTheme.of(context)
+                                      .bodyMediumFamily,
+                                  fontWeight: FontWeight.w600,
+                                  useGoogleFonts: GoogleFonts.asMap()
+                                      .containsKey(FlutterFlowTheme.of(context)
+                                          .bodyMediumFamily),
                                 ),
-                                Align(
-                                  alignment: AlignmentDirectional(-1, 0),
-                                  child: Padding(
-                                    padding: EdgeInsetsDirectional.fromSTEB(
-                                        10, 8, 0, 0),
-                                    child: Text(
-                                      'Која е вашата наредна дестинација?',
-                                      style: FlutterFlowTheme.of(context)
-                                          .bodyLarge,
-                                    ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        body: Stack(children: [
+          SlidingSheet(
+              elevation: 8,
+              cornerRadius: 16,
+              snapSpec: const SnapSpec(
+                // Enable snapping. This is true by default.
+                snap: true,
+                // Set custom snapping points.
+                snappings: [0.4, 0.7, 1.0],
+                // Define to what the snappings relate to. In this case,
+                // the total available space that the sheet can expand to.
+                positioning: SnapPositioning.relativeToAvailableSpace,
+              ),
+              // The body widget will be displayed under the SlidingSheet
+              // and a parallax effect can be applied to it.
+              body: Stack(
+                children: [
+                  GoogleMap(
+                    mapType: MapType.normal,
+                    myLocationButtonEnabled: true,
+                    myLocationEnabled: permissionsGranted,
+                    zoomGesturesEnabled: true,
+                    zoomControlsEnabled: true,
+                    polylines: polylineSet,
+                    markers: markersSet,
+                    circles: circlesSet,
+                    gestureRecognizers: Set()
+                      ..add(Factory<PanGestureRecognizer>(
+                          () => PanGestureRecognizer()))
+                      ..add(Factory<ScaleGestureRecognizer>(
+                          () => ScaleGestureRecognizer()))
+                      ..add(Factory<TapGestureRecognizer>(
+                          () => TapGestureRecognizer()))
+                      ..add(Factory<VerticalDragGestureRecognizer>(
+                          () => VerticalDragGestureRecognizer())),
+                    initialCameraPosition: _kGooglePlex,
+                    padding: EdgeInsets.only(
+                        bottom: MediaQuery.sizeOf(context).height * 0.3),
+                    onMapCreated: (GoogleMapController controller) => {
+                      _controller.complete(controller),
+                      googleMapController = controller,
+                      locatePosition()
+                    },
+                  ),
+                  getSearchDestShown
+                      ? AnimatedOpacity(
+                          opacity: getSearchDestShown ? 1.0 : 0.0,
+                          duration: const Duration(milliseconds: 500),
+                          child: SearchDestinationWidget(
+                            visible: getSearchDestShown,
+                            updateParent: updateSearchDestShown,
+                          ),
+                        )
+                      : Container(),
+                  searchDestShown
+                      ? Container()
+                      : Align(
+                          alignment: AlignmentDirectional(-0.89, -0.79),
+                          child: FlutterFlowIconButton(
+                            borderColor: FlutterFlowTheme.of(context).primary,
+                            borderRadius: 20,
+                            borderWidth: 1,
+                            buttonSize: 40,
+                            fillColor: FlutterFlowTheme.of(context).info,
+                            icon: showRideChoice
+                                ? Icon(
+                                    Icons.close,
+                                    color: FlutterFlowTheme.of(context).primary,
+                                    size: 24,
+                                  )
+                                : Icon(
+                                    Icons.list,
+                                    color: FlutterFlowTheme.of(context).primary,
+                                    size: 24,
                                   ),
-                                ),
-                                GestureDetector(
-                                  onTap: () {
-                                    setState(() {
-                                      if (currentPosition == null) {
-                                        locatePosition();
-                                      }
-                                      searchDestShown = !searchDestShown;
-                                    });
-                                  },
-                                  child: Padding(
-                                    padding: EdgeInsetsDirectional.fromSTEB(
-                                        0, 20, 0, 0),
-                                    child: Container(
-                                      width: MediaQuery.sizeOf(context).width *
-                                          0.8,
-                                      height:
-                                          MediaQuery.sizeOf(context).height *
-                                              0.05,
-                                      decoration: BoxDecoration(
-                                        color: FlutterFlowTheme.of(context)
-                                            .secondaryBackground,
-                                        boxShadow: [
-                                          BoxShadow(
-                                            blurRadius: 4,
-                                            color: Color(0x33000000),
-                                            offset: Offset(0, 2),
-                                          )
-                                        ],
+                            onPressed: () {
+                              if (showRideChoice) {
+                                resetTrip();
+                              } else {
+                                scaffoldKey.currentState!.openDrawer();
+                              }
+                            },
+                          ),
+                        )
+                ],
+              ),
+              builder: (context, state) {
+                // This is the content of the sheet that will get
+                // scrolled, if the content is bigger than the available
+                // height of the sheet.
+                return SingleChildScrollView(
+                  child: Column(children: [
+                    showRideChoice
+                        ? (requestedRide
+                            ? (driverAccepted
+                                ? Container(
+                                    width: MediaQuery.sizeOf(context).width,
+                                    height:
+                                        MediaQuery.sizeOf(context).height * 0.3,
+                                    decoration: BoxDecoration(
+                                      color: FlutterFlowTheme.of(context)
+                                          .secondaryBackground,
+                                      borderRadius: BorderRadius.only(
+                                        bottomLeft: Radius.circular(0),
+                                        bottomRight: Radius.circular(0),
+                                        topLeft: Radius.circular(25),
+                                        topRight: Radius.circular(25),
                                       ),
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.max,
-                                        children: [
-                                          Padding(
-                                            padding:
-                                                EdgeInsetsDirectional.fromSTEB(
-                                                    20, 0, 0, 0),
-                                            child: Icon(
-                                              Icons.travel_explore,
-                                              color:
-                                                  FlutterFlowTheme.of(context)
-                                                      .success,
-                                              size: 24,
-                                            ),
-                                          ),
-                                          Padding(
-                                            padding:
-                                                EdgeInsetsDirectional.fromSTEB(
-                                                    20, 0, 0, 0),
-                                            child: Text(
-                                              'Пребарај локација',
-                                              style:
-                                                  FlutterFlowTheme.of(context)
-                                                      .bodyMedium,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
+                                      shape: BoxShape.rectangle,
                                     ),
-                                  ),
-                                ),
-                                Align(
-                                  alignment: AlignmentDirectional(0, 1),
-                                  child: Padding(
-                                    padding: EdgeInsetsDirectional.fromSTEB(
-                                        0, 20, 0, 0),
-                                    child: Container(
-                                      width: MediaQuery.sizeOf(context).width *
-                                          0.9,
-                                      height:
-                                          MediaQuery.sizeOf(context).height * 1,
-                                      decoration: BoxDecoration(
-                                        color: FlutterFlowTheme.of(context)
-                                            .secondaryBackground,
-                                      ),
+                                    child: SingleChildScrollView(
                                       child: Column(
                                         mainAxisSize: MainAxisSize.max,
                                         children: [
-                                          Row(
-                                            mainAxisSize: MainAxisSize.max,
-                                            children: [
-                                              Align(
-                                                alignment:
-                                                    AlignmentDirectional(0, 0),
-                                                child: Padding(
-                                                  padding: EdgeInsetsDirectional
-                                                      .fromSTEB(0, 0, 20, 6),
-                                                  child: Icon(
-                                                    Icons.home,
-                                                    color: FlutterFlowTheme.of(
-                                                            context)
-                                                        .success,
-                                                    size: 16,
-                                                  ),
-                                                ),
+                                          Align(
+                                            alignment: Alignment.center,
+                                            child: Padding(
+                                              padding: EdgeInsetsDirectional
+                                                  .fromSTEB(10, 8, 0, 0),
+                                              child: Text(
+                                                statusRide == "accepted" &&
+                                                        durationText != null
+                                                    ? "Превозникот е на пат кон Вас - ${durationText}"
+                                                    : statusRide ==
+                                                                "accepted" &&
+                                                            durationText == null
+                                                        ? "Превозникот е на пат кон Вас"
+                                                        : statusRide ==
+                                                                    "in_progress" &&
+                                                                durationText !=
+                                                                    null
+                                                            ? "Патувате кон дестинацијата - ${durationText}"
+                                                            : statusRide ==
+                                                                    "arrived"
+                                                                ? "Превозникот пристигна на вашата локација"
+                                                                : statusRide ==
+                                                                            "in_progress" &&
+                                                                        durationText ==
+                                                                            null
+                                                                    ? "Патувате кон дестинацијата"
+                                                                    : statusRide ==
+                                                                            "finished"
+                                                                        ? "Пристигнавте на дестинацијата"
+                                                                        : "Превозникот е на пат кон Вас",
+                                                style:
+                                                    FlutterFlowTheme.of(context)
+                                                        .bodyLarge,
                                               ),
-                                              Expanded(
-                                                child: Align(
-                                                  alignment:
-                                                      Alignment.centerLeft,
-                                                  // AlignmentDirectional(
-                                                  //     0, 0),
-                                                  child: Text(
-                                                    Provider.of<AppData>(
-                                                                    context)
-                                                                .pickUpLocation !=
-                                                            null
-                                                        ? Provider.of<AppData>(
-                                                                context)
-                                                            .pickUpLocation!
-                                                            .placeFormattedAddress
-                                                        : 'Додади ја локацијата на твојот дом',
-                                                    style: FlutterFlowTheme.of(
-                                                            context)
-                                                        .bodyMedium,
-                                                  ),
-                                                ),
-                                              ),
-                                            ],
+                                            ),
                                           ),
                                           Opacity(
                                             opacity: 0.8,
@@ -1078,49 +806,419 @@ class _MainPageWidgetState extends State<MainPageWidget>
                                                       .primaryText,
                                             ),
                                           ),
-                                          Row(
-                                            mainAxisSize: MainAxisSize.max,
-                                            children: [
-                                              Align(
-                                                alignment:
-                                                    AlignmentDirectional(0, 0),
-                                                child: Padding(
-                                                  padding: EdgeInsetsDirectional
-                                                      .fromSTEB(0, 0, 20, 6),
-                                                  child: Icon(
-                                                    Icons.work,
-                                                    color: FlutterFlowTheme.of(
-                                                            context)
-                                                        .success,
-                                                    size: 16,
-                                                  ),
-                                                ),
-                                              ),
-                                              Align(
-                                                alignment:
-                                                    AlignmentDirectional(0, 0),
-                                                child: Text(
-                                                  'Додади ја локацијата на твојата работа',
-                                                  style: FlutterFlowTheme.of(
+                                          Align(
+                                            alignment:
+                                                AlignmentDirectional(0, 1),
+                                            child: Padding(
+                                              padding: EdgeInsetsDirectional
+                                                  .fromSTEB(0, 20, 0, 0),
+                                              child: Container(
+                                                width:
+                                                    MediaQuery.sizeOf(context)
+                                                            .width *
+                                                        0.9,
+                                                height:
+                                                    MediaQuery.sizeOf(context)
+                                                            .height *
+                                                        1,
+                                                decoration: BoxDecoration(
+                                                  color: FlutterFlowTheme.of(
                                                           context)
-                                                      .bodyMedium,
+                                                      .secondaryBackground,
+                                                ),
+                                                child: Column(
+                                                  mainAxisSize:
+                                                      MainAxisSize.max,
+                                                  children: [
+                                                    Row(
+                                                      mainAxisSize:
+                                                          MainAxisSize.max,
+                                                      children: [
+                                                        Expanded(
+                                                          child: Align(
+                                                            alignment: Alignment
+                                                                .centerLeft,
+                                                            // AlignmentDirectional(
+                                                            //     0, 0),
+                                                            child: Text(
+                                                              carDetails ??
+                                                                  'Бела Toyota Corolla',
+                                                              style: FlutterFlowTheme
+                                                                      .of(context)
+                                                                  .bodyLarge
+                                                                  .override(
+                                                                    fontFamily:
+                                                                        FlutterFlowTheme.of(context)
+                                                                            .bodyLargeFamily,
+                                                                    fontSize:
+                                                                        20,
+                                                                    fontWeight:
+                                                                        FontWeight
+                                                                            .w600,
+                                                                    useGoogleFonts: GoogleFonts
+                                                                            .asMap()
+                                                                        .containsKey(
+                                                                            FlutterFlowTheme.of(context).bodyLargeFamily),
+                                                                  ),
+                                                            ),
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                    Row(
+                                                      mainAxisSize:
+                                                          MainAxisSize.max,
+                                                      children: [
+                                                        Expanded(
+                                                          child: Align(
+                                                            alignment: Alignment
+                                                                .centerLeft,
+                                                            // AlignmentDirectional(
+                                                            //     0, 0),
+                                                            child: Text(
+                                                              driverName ??
+                                                                  'Ime Prezime',
+                                                              style: FlutterFlowTheme
+                                                                      .of(context)
+                                                                  .bodyMedium,
+                                                            ),
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                    Opacity(
+                                                      opacity: 0.8,
+                                                      child: Divider(
+                                                        thickness: 1,
+                                                        color:
+                                                            FlutterFlowTheme.of(
+                                                                    context)
+                                                                .primaryText,
+                                                      ),
+                                                    ),
+                                                    Row(
+                                                      mainAxisAlignment:
+                                                          MainAxisAlignment
+                                                              .spaceAround,
+                                                      children: [
+                                                        Column(
+                                                          children: [
+                                                            FlutterFlowIconButton(
+                                                              icon: Icon(
+                                                                Icons.phone,
+                                                              ),
+                                                              borderRadius: 20,
+                                                              borderWidth: 1,
+                                                              onPressed: () {
+                                                                launch(
+                                                                    "tel://${driverPhone}");
+                                                              },
+                                                            ),
+                                                            Text(
+                                                              "Повикај",
+                                                              style: FlutterFlowTheme
+                                                                      .of(context)
+                                                                  .bodySmall,
+                                                            ),
+                                                          ],
+                                                        ),
+                                                        Column(
+                                                          children: [
+                                                            FlutterFlowIconButton(
+                                                              icon: Icon(
+                                                                Icons.list,
+                                                              ),
+                                                              borderRadius: 20,
+                                                              borderWidth: 1,
+                                                              onPressed: () {
+                                                                print(
+                                                                    "details PRESED");
+                                                              },
+                                                            ),
+                                                            Text(
+                                                              "Детали",
+                                                              style: FlutterFlowTheme
+                                                                      .of(context)
+                                                                  .bodySmall,
+                                                            ),
+                                                          ],
+                                                        ),
+                                                        Column(
+                                                          children: [
+                                                            FlutterFlowIconButton(
+                                                              icon: Icon(
+                                                                Icons.close,
+                                                              ),
+                                                              borderRadius: 20,
+                                                              borderWidth: 1,
+                                                              onPressed: () {
+                                                                print(
+                                                                    "CANCEL PRESED");
+                                                              },
+                                                            ),
+                                                            Text(
+                                                              "Откажи",
+                                                              style: FlutterFlowTheme
+                                                                      .of(context)
+                                                                  .bodySmall,
+                                                            ),
+                                                          ],
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  ],
                                                 ),
                                               ),
-                                            ],
+                                            ),
                                           ),
                                         ],
                                       ),
                                     ),
+                                  )
+                                : RequestingRideWidget(
+                                    requestRide: requestRide,
+                                    cancelRide: cancelRide))
+                            : RideChoiceWidget(
+                                requestRide: requestRide,
+                                changeRideType: changeRideType))
+                        : Container(
+                            width: MediaQuery.sizeOf(context).width,
+                            height: MediaQuery.sizeOf(context).height * 0.3,
+                            decoration: BoxDecoration(
+                              color: FlutterFlowTheme.of(context)
+                                  .secondaryBackground,
+                              borderRadius: BorderRadius.only(
+                                bottomLeft: Radius.circular(0),
+                                bottomRight: Radius.circular(0),
+                                topLeft: Radius.circular(25),
+                                topRight: Radius.circular(25),
+                              ),
+                              shape: BoxShape.rectangle,
+                            ),
+                            child: SingleChildScrollView(
+                              child: Column(
+                                mainAxisSize: MainAxisSize.max,
+                                children: [
+                                  Align(
+                                    alignment: AlignmentDirectional(-1, 0),
+                                    child: Padding(
+                                      padding: EdgeInsetsDirectional.fromSTEB(
+                                          10, 8, 0, 0),
+                                      child: Text(
+                                        'Здраво,',
+                                        style: FlutterFlowTheme.of(context)
+                                            .bodyMedium
+                                            .override(
+                                              fontFamily:
+                                                  FlutterFlowTheme.of(context)
+                                                      .bodyMediumFamily,
+                                              fontWeight: FontWeight.w600,
+                                              useGoogleFonts: GoogleFonts
+                                                      .asMap()
+                                                  .containsKey(
+                                                      FlutterFlowTheme.of(
+                                                              context)
+                                                          .bodyMediumFamily),
+                                            ),
+                                      ),
+                                    ),
                                   ),
-                                ),
-                              ],
+                                  Align(
+                                    alignment: AlignmentDirectional(-1, 0),
+                                    child: Padding(
+                                      padding: EdgeInsetsDirectional.fromSTEB(
+                                          10, 8, 0, 0),
+                                      child: Text(
+                                        'Која е вашата наредна дестинација?',
+                                        style: FlutterFlowTheme.of(context)
+                                            .bodyLarge,
+                                      ),
+                                    ),
+                                  ),
+                                  GestureDetector(
+                                    onTap: () {
+                                      setState(() {
+                                        if (currentPosition == null) {
+                                          locatePosition();
+                                        }
+                                        searchDestShown = !searchDestShown;
+                                      });
+                                    },
+                                    child: Padding(
+                                      padding: EdgeInsetsDirectional.fromSTEB(
+                                          0, 20, 0, 0),
+                                      child: Container(
+                                        width:
+                                            MediaQuery.sizeOf(context).width *
+                                                0.8,
+                                        height:
+                                            MediaQuery.sizeOf(context).height *
+                                                0.05,
+                                        decoration: BoxDecoration(
+                                          color: FlutterFlowTheme.of(context)
+                                              .secondaryBackground,
+                                          boxShadow: [
+                                            BoxShadow(
+                                              blurRadius: 4,
+                                              color: Color(0x33000000),
+                                              offset: Offset(0, 2),
+                                            )
+                                          ],
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.max,
+                                          children: [
+                                            Padding(
+                                              padding: EdgeInsetsDirectional
+                                                  .fromSTEB(20, 0, 0, 0),
+                                              child: Icon(
+                                                Icons.travel_explore,
+                                                color:
+                                                    FlutterFlowTheme.of(context)
+                                                        .success,
+                                                size: 24,
+                                              ),
+                                            ),
+                                            Padding(
+                                              padding: EdgeInsetsDirectional
+                                                  .fromSTEB(20, 0, 0, 0),
+                                              child: Text(
+                                                'Пребарај локација',
+                                                style:
+                                                    FlutterFlowTheme.of(context)
+                                                        .bodyMedium,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  Align(
+                                    alignment: AlignmentDirectional(0, 1),
+                                    child: Padding(
+                                      padding: EdgeInsetsDirectional.fromSTEB(
+                                          0, 20, 0, 0),
+                                      child: Container(
+                                        width:
+                                            MediaQuery.sizeOf(context).width *
+                                                0.9,
+                                        height:
+                                            MediaQuery.sizeOf(context).height *
+                                                1,
+                                        decoration: BoxDecoration(
+                                          color: FlutterFlowTheme.of(context)
+                                              .secondaryBackground,
+                                        ),
+                                        child: Column(
+                                          mainAxisSize: MainAxisSize.max,
+                                          children: [
+                                            Row(
+                                              mainAxisSize: MainAxisSize.max,
+                                              children: [
+                                                Align(
+                                                  alignment:
+                                                      AlignmentDirectional(
+                                                          0, 0),
+                                                  child: Padding(
+                                                    padding:
+                                                        EdgeInsetsDirectional
+                                                            .fromSTEB(
+                                                                0, 0, 20, 6),
+                                                    child: Icon(
+                                                      Icons.home,
+                                                      color:
+                                                          FlutterFlowTheme.of(
+                                                                  context)
+                                                              .success,
+                                                      size: 16,
+                                                    ),
+                                                  ),
+                                                ),
+                                                Expanded(
+                                                  child: Align(
+                                                    alignment:
+                                                        Alignment.centerLeft,
+                                                    // AlignmentDirectional(
+                                                    //     0, 0),
+                                                    child: Text(
+                                                      Provider.of<AppData>(
+                                                                      context)
+                                                                  .pickUpLocation !=
+                                                              null
+                                                          ? Provider.of<
+                                                                      AppData>(
+                                                                  context)
+                                                              .pickUpLocation!
+                                                              .placeFormattedAddress
+                                                          : 'Додади ја локацијата на твојот дом',
+                                                      style:
+                                                          FlutterFlowTheme.of(
+                                                                  context)
+                                                              .bodyMedium,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                            Opacity(
+                                              opacity: 0.8,
+                                              child: Divider(
+                                                thickness: 1,
+                                                color:
+                                                    FlutterFlowTheme.of(context)
+                                                        .primaryText,
+                                              ),
+                                            ),
+                                            Row(
+                                              mainAxisSize: MainAxisSize.max,
+                                              children: [
+                                                Align(
+                                                  alignment:
+                                                      AlignmentDirectional(
+                                                          0, 0),
+                                                  child: Padding(
+                                                    padding:
+                                                        EdgeInsetsDirectional
+                                                            .fromSTEB(
+                                                                0, 0, 20, 6),
+                                                    child: Icon(
+                                                      Icons.work,
+                                                      color:
+                                                          FlutterFlowTheme.of(
+                                                                  context)
+                                                              .success,
+                                                      size: 16,
+                                                    ),
+                                                  ),
+                                                ),
+                                                Align(
+                                                  alignment:
+                                                      AlignmentDirectional(
+                                                          0, 0),
+                                                  child: Text(
+                                                    'Додади ја локацијата на твојата работа',
+                                                    style: FlutterFlowTheme.of(
+                                                            context)
+                                                        .bodyMedium,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
-                        ),
-                ]),
-              );
-            }),
-      ]),
+                  ]),
+                );
+              }),
+        ]),
+      ),
     );
   }
 
@@ -1246,6 +1344,16 @@ class _MainPageWidgetState extends State<MainPageWidget>
 
   void initGeoFireListener() {
     Geofire.initialize("availableProviders");
+    GeoFirePoint center = geo.point(
+        latitude: currentPosition.latitude,
+        longitude: currentPosition.longitude);
+    double radius = 5;
+    String field = 'position';
+    Stream<List<DocumentSnapshot>> stream = geo
+        .collection(collectionRef: availableProvidersRef)
+        .withinAsSingleStreamSubscription(
+            center: center, radius: radius, field: field);
+
     //
     Geofire.queryAtLocation(
             currentPosition.latitude, currentPosition.longitude, 5)!
@@ -1294,6 +1402,26 @@ class _MainPageWidgetState extends State<MainPageWidget>
       setState(() {});
     });
     //
+
+    //for web implementation with geoflutterfire2
+
+    if (kIsWeb) {
+      stream.listen((List<DocumentSnapshot> documentList) {
+        GeofireAssistant.nearbyAvailableDrivers.clear();
+        documentList.forEach((DocumentSnapshot document) {
+          Map<String, dynamic> snapData =
+              document.data() as Map<String, dynamic>;
+          final GeoPoint point = snapData['position']['geopoint'];
+          NearbyAvailableDriver nearbyAvailableDriver = NearbyAvailableDriver(
+              key: snapData['name'],
+              latitude: point.latitude,
+              longitude: point.longitude);
+          GeofireAssistant.nearbyAvailableDrivers.add(nearbyAvailableDriver);
+          updateAvailableDriversOnMap();
+          setState(() {});
+        });
+      });
+    }
   }
 
   void updateAvailableDriversOnMap() async {
@@ -1360,21 +1488,45 @@ class _MainPageWidgetState extends State<MainPageWidget>
     });
   }
 
-  void searchNearestDriver() {
+  Future<void> searchNearestDriver() async {
     if (availableDrivers.length == 0) {
       showDialog(
           context: context,
-          builder: ((context) => Text(
-                "Во моментот нема достапни превозници, Ве молиме почекајте.",
-                style: TextStyle(color: Colors.white),
+          builder: ((context) => AlertDialog(
+                content: Text(
+                    "Во моментот нема достапни превозници, Ве молиме почекајте."),
               )));
       cancelRideRequest();
       resetTrip();
       return;
     } else {
       var nearestDriver = availableDrivers[0];
-      notifyDriver(nearestDriver);
-      availableDrivers.removeAt(0);
+      var nearestDriverRideType =
+          await providersRef.child(nearestDriver.key).child("role").get();
+      if (nearestDriverRideType.value != null) {
+        String driverType = nearestDriverRideType.value.toString();
+        String compareType = rideType + "_driver";
+        if (driverType == compareType) {
+          notifyDriver(nearestDriver);
+          availableDrivers.removeAt(0);
+        } else {
+          showDialog(
+              context: context,
+              builder: ((context) => AlertDialog(
+                    content: Text(
+                        "Во моментот нема достапни превозници од бараниот тип. Ве молиме обидете се повторно или селектирајте друг тип на превозник."),
+                  )));
+          availableDrivers.removeAt(0);
+          searchNearestDriver();
+        }
+      } else {
+        showDialog(
+            context: context,
+            builder: ((context) => AlertDialog(
+                  content: Text(
+                      "Во моментот нема достапни превозници. Ве молиме обидете се повторно за неколку минути."),
+                )));
+      }
     }
   }
 

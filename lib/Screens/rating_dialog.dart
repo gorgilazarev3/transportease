@@ -51,7 +51,7 @@ class _RatingDialogWidgetState extends State<RatingDialogWidget> {
       onTap: () => FocusScope.of(context).requestFocus(_model.unfocusNode),
       child: Scaffold(
         key: scaffoldKey,
-        backgroundColor: FlutterFlowTheme.of(context).primaryBackground,
+        backgroundColor: Colors.transparent,
         body: SafeArea(
           top: true,
           // child: Column(
@@ -60,7 +60,9 @@ class _RatingDialogWidgetState extends State<RatingDialogWidget> {
           child: Align(
             alignment: AlignmentDirectional(0, 0),
             child: Container(
-              width: MediaQuery.sizeOf(context).width * 0.8,
+              width: MediaQuery.sizeOf(context).width >= 768
+                  ? MediaQuery.sizeOf(context).width * 0.6
+                  : MediaQuery.sizeOf(context).width * 0.8,
               height: MediaQuery.sizeOf(context).height * 0.4,
               decoration: BoxDecoration(
                 color: FlutterFlowTheme.of(context).secondaryBackground,
@@ -73,7 +75,9 @@ class _RatingDialogWidgetState extends State<RatingDialogWidget> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Container(
-                        width: MediaQuery.sizeOf(context).width * 0.8,
+                        width: MediaQuery.sizeOf(context).width >= 768
+                            ? MediaQuery.sizeOf(context).width * 0.6
+                            : MediaQuery.sizeOf(context).width * 0.8,
                         height: MediaQuery.sizeOf(context).height * 0.07,
                         decoration: BoxDecoration(
                           color: FlutterFlowTheme.of(context).alternate,
@@ -112,17 +116,29 @@ class _RatingDialogWidgetState extends State<RatingDialogWidget> {
                         starCount: 5,
                         size: 45,
                         onRatingChanged: (rating) {
-                          starCount = rating;
+                          setState(() {
+                            starCount = rating;
+                          });
                           if (starCount == 0 || starCount == 1) {
-                            title = "Многу лошо";
+                            setState(() {
+                              title = "Многу лошо";
+                            });
                           } else if (starCount == 2) {
-                            title = "Лошо";
+                            setState(() {
+                              title = "Лошо";
+                            });
                           } else if (starCount == 3) {
-                            title = "Добро";
+                            setState(() {
+                              title = "Добро";
+                            });
                           } else if (starCount == 4) {
-                            title = "Многу добро";
+                            setState(() {
+                              title = "Многу добро";
+                            });
                           } else if (starCount == 5) {
-                            title = "Одлично";
+                            setState(() {
+                              title = "Одлично";
+                            });
                           }
                         },
                       )),
@@ -165,7 +181,7 @@ class _RatingDialogWidgetState extends State<RatingDialogWidget> {
                             ratingsRef.set(starCount.toString());
                           }
 
-                          Navigator.pop(context);
+                          Navigator.pop(context, "rated");
                         },
                         child: Align(
                           alignment: AlignmentDirectional(0, 1),
@@ -173,7 +189,9 @@ class _RatingDialogWidgetState extends State<RatingDialogWidget> {
                             padding:
                                 EdgeInsetsDirectional.fromSTEB(0, 20, 0, 0),
                             child: Container(
-                              width: MediaQuery.sizeOf(context).width * 0.6,
+                              width: MediaQuery.sizeOf(context).width >= 768
+                                  ? MediaQuery.sizeOf(context).width * 0.4
+                                  : MediaQuery.sizeOf(context).width * 0.6,
                               height: 65,
                               decoration: BoxDecoration(
                                 color: FlutterFlowTheme.of(context).primary,

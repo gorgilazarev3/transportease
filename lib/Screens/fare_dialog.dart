@@ -49,7 +49,7 @@ class _FareDialogWidgetState extends State<FareDialogWidget> {
       onTap: () => FocusScope.of(context).requestFocus(_model.unfocusNode),
       child: Scaffold(
         key: scaffoldKey,
-        backgroundColor: FlutterFlowTheme.of(context).primaryBackground,
+        backgroundColor: Colors.transparent,
         body: SafeArea(
           top: true,
           // child: Column(
@@ -58,7 +58,9 @@ class _FareDialogWidgetState extends State<FareDialogWidget> {
           child: Align(
             alignment: AlignmentDirectional(0, 0),
             child: Container(
-              width: MediaQuery.sizeOf(context).width * 0.8,
+              width: MediaQuery.sizeOf(context).width >= 768
+                  ? MediaQuery.sizeOf(context).width * 0.6
+                  : MediaQuery.sizeOf(context).width * 0.8,
               height: MediaQuery.sizeOf(context).height * 0.4,
               decoration: BoxDecoration(
                 color: FlutterFlowTheme.of(context).secondaryBackground,
@@ -71,7 +73,9 @@ class _FareDialogWidgetState extends State<FareDialogWidget> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Container(
-                        width: MediaQuery.sizeOf(context).width * 0.8,
+                        width: MediaQuery.sizeOf(context).width >= 768
+                            ? MediaQuery.sizeOf(context).width * 0.6
+                            : MediaQuery.sizeOf(context).width * 0.8,
                         height: MediaQuery.sizeOf(context).height * 0.07,
                         decoration: BoxDecoration(
                           color: FlutterFlowTheme.of(context).alternate,
@@ -104,7 +108,7 @@ class _FareDialogWidgetState extends State<FareDialogWidget> {
                   Align(
                     alignment: AlignmentDirectional(0, 0),
                     child: Padding(
-                      padding: EdgeInsetsDirectional.fromSTEB(0, 50, 0, 0),
+                      padding: EdgeInsetsDirectional.fromSTEB(0, 20, 0, 0),
                       child: Row(
                         mainAxisSize: MainAxisSize.max,
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -113,7 +117,7 @@ class _FareDialogWidgetState extends State<FareDialogWidget> {
                             alignment: AlignmentDirectional(0, 0),
                             child: Text(
                               '${widget.fareAmount} денари',
-                              style: FlutterFlowTheme.of(context).displaySmall,
+                              style: FlutterFlowTheme.of(context).headlineLarge,
                             ),
                           ),
                         ],
@@ -151,8 +155,10 @@ class _FareDialogWidgetState extends State<FareDialogWidget> {
                             padding:
                                 EdgeInsetsDirectional.fromSTEB(0, 20, 0, 0),
                             child: Container(
-                              width: MediaQuery.sizeOf(context).width * 0.6,
-                              height: 65,
+                              width: MediaQuery.sizeOf(context).width >= 768
+                                  ? MediaQuery.sizeOf(context).width * 0.4
+                                  : MediaQuery.sizeOf(context).width * 0.6,
+                              height: 55,
                               decoration: BoxDecoration(
                                 color: FlutterFlowTheme.of(context).primary,
                                 borderRadius: BorderRadius.circular(10),
@@ -174,7 +180,7 @@ class _FareDialogWidgetState extends State<FareDialogWidget> {
                                                     .bodyMediumFamily,
                                             color: FlutterFlowTheme.of(context)
                                                 .info,
-                                            fontSize: 18,
+                                            fontSize: 16,
                                             fontWeight: FontWeight.w600,
                                             useGoogleFonts: GoogleFonts.asMap()
                                                 .containsKey(
